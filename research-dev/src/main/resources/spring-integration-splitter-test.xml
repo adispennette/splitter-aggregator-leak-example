@@ -47,7 +47,8 @@
 	
 	<aggregator input-channel="aggregator-InChannel"
 		output-channel="aggregator-OutChannel" 
-		message-store="testMessageStore"/>
+		message-store="testMessageStore"
+		correlation-strategy="correlationStrategy"/>
 	
 	<channel id="aggregator-OutChannel" />
 	
