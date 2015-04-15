@@ -8,7 +8,7 @@
 		<version>1.1.2-SNAPSHOT</version>
 	</parent>
 
-	<groupId>com.monitise.mvp.research</groupId>
+	<groupId>com.test.research</groupId>
 	<artifactId>research-dev</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
