@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans xmlns="http://www.springframework.org/schema/integration"
+	xmlns:beans="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:int-jms="http://www.springframework.org/schema/integration/jms"
+	xmlns:util="http://www.springframework.org/schema/util" 
+	xmlns:int-ws="http://www.springframework.org/schema/integration/ws"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:int-stream="http://www.springframework.org/schema/integration/stream"
+	xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="http://www.springframework.org/schema/integration/ws http://www.springframework.org/schema/integration/ws/spring-integration-ws.xsd
+        http://www.springframework.org/schema/jms http://www.springframework.org/schema/jms/spring-jms.xsd
+        http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
+        http://www.springframework.org/schema/integration/jms http://www.springframework.org/schema/integration/jms/spring-integration-jms.xsd
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd
+        http://www.springframework.org/schema/integration/stream http://www.springframework.org/schema/integration/stream/spring-integration-stream.xsd
+        http://www.springframework.org/schema/web-services http://www.springframework.org/schema/web-services/web-services.xsd
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd">
+
+	<gateway id="splitterTestServiceGateway" 
+		service-interface="com.test.service.SplitterTestServiceGateway"
+		default-request-timeout="15000" default-reply-timeout="15000">
+		<method name="execute" request-channel="headerEnricher-InChannel" />
+	</gateway>
+	
+	<channel id="headerEnricher-InChannel"/>
+	
+	<header-enricher input-channel="headerEnricher-InChannel"
+		output-channel="splitter-InChannel">
+		<header name="CORR_ID" value="java.util.UUID.randomUUID().toString()"></header>
+	</header-enricher>
+	
+	<channel id="splitter-InChannel"/>
+	
+	<splitter input-channel="splitter-InChannel"
+		output-channel="splitter-outChannel" />
+	
+	<channel id="splitter-outChannel"/>
+	
+	<transformer input-channel="splitter-outChannel"
+		output-channel="aggregator-InChannel"
+		ref="splitterTestTransformer" method="doTransform"/>
+	
+	<publish-subscribe-channel id="aggregator-InChannel" />
+	
+	<aggregator input-channel="aggregator-InChannel"
+		output-channel="aggregator-OutChannel" 
+		message-store="testMessageStore"/>
+	
+	<channel id="aggregator-OutChannel" />
+	
+	<int-stream:stdout-channel-adapter channel="aggregator-OutChannel" append-newline="true" />
+	
+	<beans:bean id="splitterTestTransformer" class="com.test.transformer.SplitterTestTransformer"/>
+	<beans:bean id="testMessageStore" class="org.springframework.integration.store.SimpleMessageStore" />
+
+	<beans:bean id="correlationStrategy" class="org.springframework.integration.aggregator.HeaderAttributeCorrelationStrategy">
+		<beans:constructor-arg value="CORR_ID"/>
+	</beans:bean> 
+
+	<beans:bean id="testMessageStoreReaper" class="org.springframework.integration.store.MessageGroupStoreReaper">
+		<beans:property name="messageGroupStore" ref="testMessageStore" />
+		<beans:property name="timeout" value="5000" />
+	</beans:bean>
+	
+	<task:scheduled-tasks>
+		<task:scheduled ref="testMessageStoreReaper" method="run" fixed-rate="5000" />
+	</task:scheduled-tasks>
+	
+</beans:beans>
